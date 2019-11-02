@@ -28,9 +28,9 @@ PERMISSIONS_MESSAGE = """
 EXIT_MESSAGE = "=== IRSee you later! ==="
 
 
-def sniff(iface):
+def sniff(iface, bpf):
     """Capture IRC packets pass over the given interface"""
-    cap = pyshark.LiveCapture(interface=iface, bpf_filter="tcp port 6667")
+    cap = pyshark.LiveCapture(interface=iface, bpf_filter=bpf)
 
     try:
         capture(cap)
@@ -62,17 +62,39 @@ def exit(code):
         os._exit(code)
 
 
-def main():
+def init_parser():
+    """Return new parser with defined arguments"""
     parser = argparse.ArgumentParser(description="IRSee, a simple IRC sniffer")
 
     parser.add_argument(
         "iface", metavar="interface", type=str, nargs="+", help="the interface to sniff"
     )
 
+    parser.add_argument(
+        "-p", "--port", type=int, default=6667, help="port to filter IRC traffic."
+    )
+
+    parser.add_argument(
+        "-a",
+        "--all",
+        action="store_true",
+        help="listen over all TCP ports. (Ignores --port flag)",
+    )
+
+    return parser
+
+
+def main():
+    parser = init_parser()
     args = parser.parse_args()
 
+    # Format BPF filter
+    # if --all was supplied, listen over all TCP ports
+    # otherwise, listen over TCP --port (defaults to 6667)
+    bpf = "tcp" if args.all else "tcp port %d" % args.port
+
     try:
-        sniff(args.iface)
+        sniff(args.iface, bpf)
     except PermissionError as e:
         print(PERMISSIONS_MESSAGE)
 
