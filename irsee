@@ -12,6 +12,7 @@ import pyshark
 import sys
 import os
 import argparse
+from datetime import datetime
 
 PERMISSIONS_MESSAGE = """
       === Permission Denied ===
@@ -46,11 +47,19 @@ def capture(cap):
             layer = pkt["irc"]
 
             if "response" in layer.field_names:
-                print(layer.get_field_value("response"))
+                msg = stringify_layer(layer, "response")
             else:
-                print(layer.get_field_value("request"))
+                msg = stringify_layer(layer, "request")
+
+            print("%s %s" % (str(datetime.utcnow()), msg))
 
     cap.close()
+
+
+def stringify_layer(layer, direction):
+    """Parse IRC layer into human readable string"""
+    msg = "[%s] %s" % (direction[:3], layer.get_field_value(direction))
+    return msg
 
 
 def exit(code):
